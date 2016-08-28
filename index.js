@@ -7,7 +7,7 @@ var session = require('express-session')
 var bodyParser = require('body-parser')
 var morgan = require('morgan')
 var flash = require('connect-flash')
-var bcrypt = require('bcrypt')
+var bcrypt = require('bcrypt-nodejs')
 
 var config = require('./knexfile')
 var knex = require('knex')(config.development)
@@ -22,13 +22,11 @@ passport.deserializeUser(function(id, cb) {
   })
 })
 
-generateHash = function(password) {
-    return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null)
-};
-
 var isAuthenticated = function(req, res, next) {
   if (req.isAuthenticated())
     return next()
+    
+  req.flash('error', 'You must be logged in to access that page.')
   res.redirect('/login')
 }
 
@@ -37,13 +35,12 @@ var app = express()
 app.engine('handlebars', exphbs({defaultLayout: 'main'}));
 app.set('view engine', 'handlebars');
 
-var s = new LocalStrategy(
+passport.use('login', new LocalStrategy(
   function(username, password, done) {
     knex('users').where('username', username).then(function(users){
       if(users.length > 0) {
         var user = users[0]
-        // if(bcrypt.compareSync(password, user.password)) {
-        if (password === user.password) {
+        if(bcrypt.compareSync(password, user.password)) {
           return done(null, user)
         } else {
           return done(null, false, { message: 'Invalid password.' })
@@ -53,9 +50,7 @@ var s = new LocalStrategy(
       }
     })
   }
-)
-
-passport.use('hudson', s)
+))
 
 app.use(express.static('public'))
 app.use(morgan('dev'))
@@ -79,7 +74,7 @@ app.get('/login', function(req, res) {
 })
 
 app.post('/login',
-  passport.authenticate('hudson', { failureRedirect: '/login', failureFlash: true } ),
+  passport.authenticate('login', { failureRedirect: '/login', failureFlash: true } ),
   function(req, res) {
     res.redirect('/')
   }
