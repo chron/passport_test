@@ -5,11 +5,17 @@
     <title>Hudson</title>
 </head>
 <body>
-    {{#if user}}
-      <h1>{{user.username}} (<a href="/logout">logout</a>)</h1>
-    {{else}}
-      <a href="/login">login</a>
-    {{/if}}
+  <ul>
+    <li><a href="/secret">secret</a></li>
+    <li>
+      {{#if user}}
+        <a href="/logout">logout ({{user.username}})</a></li>
+      {{else}}
+        <a href="/login">login</a>
+      {{/if}}
+    </li>
+  </ul>
+
     {{{body}}}
 </body>
 </html>

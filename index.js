@@ -26,6 +26,12 @@ generateHash = function(password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null)
 };
 
+var isAuthenticated = function(req, res, next) {
+  if (req.isAuthenticated())
+    return next()
+  res.redirect('/login')
+}
+
 var app = express()
 
 app.engine('handlebars', exphbs({defaultLayout: 'main'}));
@@ -62,6 +68,10 @@ app.use(flash())
 
 app.get('/', function(req, res) {
   res.render('index', { user: req.user });
+})
+
+app.get('/secret', isAuthenticated, function(req, res) {
+  res.render('secret')
 })
 
 app.get('/login', function(req, res) {
