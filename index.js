@@ -17,15 +17,15 @@ passport.serializeUser(function(user, cb) {
 })
 
 passport.deserializeUser(function(id, cb) {
-  knex('users').where('id', id).then(function(users) {
-    cb(null, users[0])
+  knex('users').where('id', id).first().then(function(user) {
+    cb(null, user)
   })
 })
 
 var isAuthenticated = function(req, res, next) {
   if (req.isAuthenticated())
     return next()
-    
+
   req.flash('error', 'You must be logged in to access that page.')
   res.redirect('/login')
 }
@@ -37,9 +37,8 @@ app.set('view engine', 'handlebars');
 
 passport.use('login', new LocalStrategy(
   function(username, password, done) {
-    knex('users').where('username', username).then(function(users){
-      if(users.length > 0) {
-        var user = users[0]
+    knex('users').where('username', username).first().then(function(user){
+      if(user) {
         if(bcrypt.compareSync(password, user.password)) {
           return done(null, user)
         } else {
@@ -49,6 +48,29 @@ passport.use('login', new LocalStrategy(
         return done(null, false, { message: 'Incorrect details.' })
       }
     })
+  }
+))
+
+passport.use('signup', new LocalStrategy(
+  function(username, password, done) {
+    if (username != '' && password != '') {
+      knex('users').where('username', username).then(function(users){
+        if(users.length > 0) {
+          return done(null, false, { message: 'Username is already taken.' })
+        } else {
+          knex('users').returning('id').insert({
+            username: username,
+            password: bcrypt.hashSync(password)
+          }).then(function(newIds){
+            knex('users').where('id', newIds[0]).first().then(function(user){
+              return done(null, user)
+            })
+          })
+        }
+      })
+    } else {
+      return done(null, false, { message: 'Username and password must be provided details.' })
+    }
   }
 ))
 
@@ -66,7 +88,7 @@ app.get('/', function(req, res) {
 })
 
 app.get('/secret', isAuthenticated, function(req, res) {
-  res.render('secret')
+  res.render('secret', { user: req.user })
 })
 
 app.get('/login', function(req, res) {
@@ -75,6 +97,17 @@ app.get('/login', function(req, res) {
 
 app.post('/login',
   passport.authenticate('login', { failureRedirect: '/login', failureFlash: true } ),
+  function(req, res) {
+    res.redirect('/')
+  }
+)
+
+app.get('/signup', function(req, res) {
+  res.render('signup', { messages: req.flash() })
+})
+
+app.post('/signup',
+  passport.authenticate('signup', { failureRedirect: '/signup', failureFlash: true } ),
   function(req, res) {
     res.redirect('/')
   }

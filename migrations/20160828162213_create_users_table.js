@@ -3,7 +3,7 @@ exports.up = function(knex, Promise) {
     table.increments();
     table.string('username')
     table.string('password')
-    table.timestamps()
+    table.timestamps(true, true)
   })
 }
 
